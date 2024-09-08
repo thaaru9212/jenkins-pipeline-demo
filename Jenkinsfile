@@ -1,58 +1,66 @@
 pipeline {
     agent any
-
+    
     stages {
         stage('Build') {
             steps {
-                echo 'Stage 1: Building the code using Maven...'
-                // Here you would use: sh 'mvn clean install'
+                echo 'Building the code using Maven...'
+                // Example: sh 'mvn clean package'
             }
         }
+
         stage('Unit and Integration Tests') {
             steps {
-                echo 'Stage 2: Running unit tests with JUnit and integration tests...'
-                // : sh 'mvn test'
+                echo 'Running unit and integration tests using JUnit...'
+                // Example: sh 'mvn test'
             }
         }
+
         stage('Code Analysis') {
             steps {
-                echo 'Stage 3: Running code analysis using SonarQube...'
-                // sonar-scanner'
+                echo 'Analyzing code using SonarQube...'
+                // Example: sh 'sonar-scanner'
             }
         }
+
         stage('Security Scan') {
             steps {
-                echo 'Stage 4: Performing security scan using OWASP Dependency-Check...'
-                // sh 'dependency-check.sh --project myproject --scan .'
+                echo 'Performing security scan using OWASP Dependency-Check...'
+                // Example: sh 'dependency-check.sh'
             }
         }
+
         stage('Deploy to Staging') {
             steps {
-                echo 'Stage 5: Deploying to Staging server (AWS EC2 instance)...'
-                //  sh 'aws deploy --application-name MyApp --deployment-group MyStagingGroup'
+                echo 'Deploying the application to Staging (e.g., AWS EC2)...'
+                // Example: sh 'scp target/app.jar user@staging-server:/path/to/deploy'
             }
         }
+
         stage('Integration Tests on Staging') {
             steps {
-                echo 'Stage 6: Running integration tests on staging environment...'
-                // Integration 
+                echo 'Running integration tests on the staging environment...'
+                // Example: sh 'curl http://staging-server/app/health'
+            }
         }
+
         stage('Deploy to Production') {
             steps {
-                echo 'Stage 7: Deploying to Production server (AWS EC2 instance)...'
-                // Production deployment 
+                echo 'Deploying the application to Production (e.g., AWS EC2)...'
+                // Example: sh 'scp target/app.jar user@prod-server:/path/to/deploy'
             }
         }
     }
 
     post {
         always {
-            emailext(
-                subject: "Build ${currentBuild.fullDisplayName} - ${currentBuild.currentResult}",
-                body: "Build ${currentBuild.fullDisplayName} finished with status: ${currentBuild.currentResult}. Check the logs attached.",
-                to: "tharaka@wow.com",  //  email
-                attachLog: true
-            )
+            echo 'Pipeline finished.'
+        }
+        success {
+            echo 'Pipeline completed successfully.'
+        }
+        failure {
+            echo 'Pipeline failed.'
         }
     }
 }
