@@ -58,14 +58,14 @@ pipeline {
         stage('Integration Tests on Staging') {
             steps {
                 echo 'Running integration tests on staging environment'
-                // sh 'mvn integration-test -Dtest.environment=staging'
+                // sh '.environment=staging'
             }
         }
 
         stage('Deploy to Production') {
             steps {
                 echo 'Deploying to AWS EC2 production instance'
-                // sh 'ansible-playbook -i inventory/production deploy.yml'
+                // sh
             }
         }
     }
