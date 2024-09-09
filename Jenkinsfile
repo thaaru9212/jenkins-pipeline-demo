@@ -1,66 +1,78 @@
 pipeline {
     agent any
-    
+
     stages {
         stage('Build') {
             steps {
-                echo 'Building the code using Maven...'
-                // Example: sh 'mvn clean package'
+                echo 'Building the code using Maven'
+                // sh 'mvn clean package'
             }
         }
 
         stage('Unit and Integration Tests') {
             steps {
-                echo 'Running unit and integration tests using JUnit...'
-                // Example: sh 'mvn test'
+                echo 'Running unit tests with JUnit'
+                // sh 'mvn test'
+                echo 'Running integration tests with Selenium'
+                // sh 'mvn integration-test'
+            }
+            post {
+                always {
+                    emailext subject: "Test Stage Status: ${currentBuild.result}",
+                             body: "The test stage has completed with status: ${currentBuild.result}",
+                             attachLog: true,
+                             to: 'developer@example.com'
+                }
             }
         }
 
         stage('Code Analysis') {
             steps {
-                echo 'Analyzing code using SonarQube...'
-                // Example: sh 'sonar-scanner'
+                echo 'Analyzing code with SonarQube'
+                // sh 'mvn sonar:sonar'
             }
         }
 
         stage('Security Scan') {
             steps {
-                echo 'Performing security scan using OWASP Dependency-Check...'
-                // Example: sh 'dependency-check.sh'
+                echo 'Performing security scan with OWASP ZAP'
+                // sh 'zap-cli quick-scan --self-contained --start-options "-config api.disablekey=true" http://localhost:8080'
+            }
+            post {
+                always {
+                    emailext subject: "Security Scan Status: ${currentBuild.result}",
+                             body: "The security scan stage has completed with status: ${currentBuild.result}",
+                             attachLog: true,
+                             to: 'thaaru1220@gmail.com'
+                }
             }
         }
 
         stage('Deploy to Staging') {
             steps {
-                echo 'Deploying the application to Staging (e.g., AWS EC2)...'
-                // Example: sh 'scp target/app.jar user@staging-server:/path/to/deploy'
+                echo 'Deploying to AWS EC2 staging instance'
+                // sh 'ansible-playbook -i inventory/staging deploy.yml'
             }
         }
 
         stage('Integration Tests on Staging') {
             steps {
-                echo 'Running integration tests on the staging environment...'
-                // Example: sh 'curl http://staging-server/app/health'
+                echo 'Running integration tests on staging environment'
+                // sh 'mvn integration-test -Dtest.environment=staging'
             }
         }
 
         stage('Deploy to Production') {
             steps {
-                echo 'Deploying the application to Production (e.g., AWS EC2)...'
-                // Example: sh 'scp target/app.jar user@prod-server:/path/to/deploy'
+                echo 'Deploying to AWS EC2 production instance'
+                // sh 'ansible-playbook -i inventory/production deploy.yml'
             }
         }
     }
 
     post {
         always {
-            echo 'Pipeline finished.'
-        }
-        success {
-            echo 'Pipeline completed successfully.'
-        }
-        failure {
-            echo 'Pipeline failed.'
+            echo 'Pipeline execution completed'
         }
     }
 }
