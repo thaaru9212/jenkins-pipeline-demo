@@ -21,7 +21,7 @@ pipeline {
                     emailext subject: "Test Stage Status: ${currentBuild.result}",
                              body: "The test stage has completed with status: ${currentBuild.result}",
                              attachLog: true,
-                             to: 'developer@example.com'
+                             to: 'thaaru1220@gmail.com'
                 }
             }
         }
