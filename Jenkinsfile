@@ -29,7 +29,7 @@ pipeline {
         stage('Code Analysis') {
             steps {
                 echo 'Analyzing code with SonarQube'
-                // sh 'mvn sonar:sonar'
+                // sh 'mvn sonar:sonar' test
             }
         }
 
