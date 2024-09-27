@@ -8,6 +8,7 @@ pipeline {
         AWS_ECR_REPO = '600627318987.dkr.ecr.ap-southeast-2.amazonaws.com/jenkins'
         AWS_REGION = 'ap-southeast-2'
         APP_NAME = 'lending-app'
+        DOCKER_TAG = "${BUILD_NUMBER}"
     }
     
     stages {
@@ -16,9 +17,13 @@ pipeline {
             steps {
                 script {
                     echo 'Building the project using Docker...'
-                    // Building the Docker image for the lending app
                     sh '''
-                    docker build -t lending-app:latest .
+                    if ! command -v docker &> /dev/null
+                    then
+                        echo "Docker could not be found"
+                        exit 1
+                    fi
+                    docker build -t lending-app:${DOCKER_TAG} .
                     '''
                 }
             }
@@ -29,9 +34,8 @@ pipeline {
             steps {
                 script {
                     echo 'Running unit and integration tests...'
-                    // Running tests inside the Docker container
                     sh '''
-                    docker run --rm lending-app:latest npm test
+                    docker run --rm lending-app:${DOCKER_TAG} npm test
                     '''
                 }
             }
@@ -50,7 +54,6 @@ pipeline {
             steps {
                 script {
                     echo 'Running code quality analysis with SonarQube...'
-                    // Run SonarQube analysis (ensure SonarQube is configured properly)
                     withSonarQubeEnv('SonarQube') {
                         sh '''
                         sonar-scanner -Dsonar.projectKey=lending-app -Dsonar.sources=src
@@ -65,7 +68,6 @@ pipeline {
             steps {
                 script {
                     echo 'Performing security scan using OWASP ZAP...'
-                    // Scanning application using OWASP ZAP
                     sh '''
                     zap-cli quick-scan --self-contained --start-options "-config api.disablekey=true" http://localhost:8080
                     '''
@@ -86,19 +88,15 @@ pipeline {
             steps {
                 script {
                     echo 'Deploying Docker image to staging environment...'
-                    // Login to AWS ECR
                     sh '''
+                    if ! command -v aws &> /dev/null
+                    then
+                        echo "AWS CLI could not be found"
+                        exit 1
+                    fi
                     aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ECR_REPO}
-                    '''
-                    
-                    // Tag and Push Docker image to ECR
-                    sh '''
-                    docker tag lending-app:latest ${AWS_ECR_REPO}:latest
-                    docker push ${AWS_ECR_REPO}:latest
-                    '''
-                    
-                    // AWS CodeDeploy deployment to staging environment
-                    sh '''
+                    docker tag lending-app:${DOCKER_TAG} ${AWS_ECR_REPO}:${DOCKER_TAG}
+                    docker push ${AWS_ECR_REPO}:${DOCKER_TAG}
                     aws deploy create-deployment --application-name ${APP_NAME} \
                         --deployment-config-name CodeDeployDefault.AllAtOnce \
                         --deployment-group-name ${STAGING_ENV} \
@@ -113,9 +111,8 @@ pipeline {
             steps {
                 script {
                     echo 'Running integration tests in staging environment...'
-                    // Running tests inside the staging environment
                     sh '''
-                    docker run --rm ${AWS_ECR_REPO}:latest npm test
+                    docker run --rm ${AWS_ECR_REPO}:${DOCKER_TAG} npm test
                     '''
                 }
             }
@@ -129,7 +126,6 @@ pipeline {
             steps {
                 script {
                     echo 'Deploying to production environment...'
-                    // AWS CodeDeploy deployment to production environment
                     sh '''
                     aws deploy create-deployment --application-name ${APP_NAME} \
                         --deployment-config-name CodeDeployDefault.AllAtOnce \
@@ -145,7 +141,6 @@ pipeline {
             steps {
                 script {
                     echo 'Setting up monitoring using New Relic...'
-                    // New Relic monitoring setup
                     sh '''
                     newrelic monitor-app --app ${APP_NAME}
                     '''
