@@ -17,7 +17,9 @@ pipeline {
                 script {
                     echo 'Building the project using Docker...'
                     // Building the Docker image for the lending app
-                    sh 'docker build -t lending-app:latest .'
+                    sh '''
+                    docker build -t lending-app:latest .
+                    '''
                 }
             }
         }
@@ -28,7 +30,9 @@ pipeline {
                 script {
                     echo 'Running unit and integration tests...'
                     // Running tests inside the Docker container
-                    sh 'docker run --rm lending-app:latest npm test' 
+                    sh '''
+                    docker run --rm lending-app:latest npm test
+                    '''
                 }
             }
             post {
@@ -48,7 +52,9 @@ pipeline {
                     echo 'Running code quality analysis with SonarQube...'
                     // Run SonarQube analysis (ensure SonarQube is configured properly)
                     withSonarQubeEnv('SonarQube') {
-                        sh 'sonar-scanner -Dsonar.projectKey=lending-app -Dsonar.sources=src'
+                        sh '''
+                        sonar-scanner -Dsonar.projectKey=lending-app -Dsonar.sources=src
+                        '''
                     }
                 }
             }
@@ -60,7 +66,9 @@ pipeline {
                 script {
                     echo 'Performing security scan using OWASP ZAP...'
                     // Scanning application using OWASP ZAP
-                    sh 'zap-cli quick-scan --self-contained --start-options "-config api.disablekey=true" http://localhost:8080'
+                    sh '''
+                    zap-cli quick-scan --self-contained --start-options "-config api.disablekey=true" http://localhost:8080
+                    '''
                 }
             }
             post {
@@ -79,11 +87,15 @@ pipeline {
                 script {
                     echo 'Deploying Docker image to staging environment...'
                     // Login to AWS ECR
-                    sh 'aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ECR_REPO}'
+                    sh '''
+                    aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ECR_REPO}
+                    '''
                     
                     // Tag and Push Docker image to ECR
-                    sh 'docker tag lending-app:latest ${AWS_ECR_REPO}:latest'
-                    sh 'docker push ${AWS_ECR_REPO}:latest'
+                    sh '''
+                    docker tag lending-app:latest ${AWS_ECR_REPO}:latest
+                    docker push ${AWS_ECR_REPO}:latest
+                    '''
                     
                     // AWS CodeDeploy deployment to staging environment
                     sh '''
@@ -102,7 +114,9 @@ pipeline {
                 script {
                     echo 'Running integration tests in staging environment...'
                     // Running tests inside the staging environment
-                    sh 'docker run --rm ${AWS_ECR_REPO}:latest npm test'
+                    sh '''
+                    docker run --rm ${AWS_ECR_REPO}:latest npm test
+                    '''
                 }
             }
         }
@@ -132,7 +146,9 @@ pipeline {
                 script {
                     echo 'Setting up monitoring using New Relic...'
                     // New Relic monitoring setup
-                    sh 'newrelic monitor-app --app ${APP_NAME}'
+                    sh '''
+                    newrelic monitor-app --app ${APP_NAME}
+                    '''
                 }
             }
         }
