@@ -1,0 +1,65 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Build') {
+            steps {
+                echo 'Building the project using Maven'
+                // Uncomment the following line to actually run Maven build
+                // sh 'mvn clean package'
+                emailext subject: "Build Stage Status: SUCCESS",
+                         body: "The Build stage has completed successfully.",
+                         to: 'thaaru1220@gmail.com'
+            }
+            post {
+                failure {
+                    emailext subject: "Build Stage Status: FAILURE",
+                             body: "The Build stage has failed.",
+                             to: 'thaaru1220@gmail.com'
+                }
+            }
+        }
+
+        stage('Test') {
+            steps {
+                echo 'Running unit and integration tests with Maven'
+                // Uncomment the following line to run tests
+                // sh 'mvn test'
+                emailext subject: "Test Stage Status: SUCCESS",
+                         body: "The Test stage has completed successfully.",
+                         to: 'thaaru1220@gmail.com'
+            }
+            post {
+                failure {
+                    emailext subject: "Test Stage Status: FAILURE",
+                             body: "The Test stage has failed.",
+                             to: 'thaaru1220@gmail.com'
+                }
+            }
+        }
+
+        stage('Deploy to Staging') {
+            steps {
+                echo 'Deploying the application to AWS EC2 Staging environment'
+                // Uncomment the following line to deploy with Ansible
+                // sh 'ansible-playbook -i inventory/staging deploy.yml'
+                emailext subject: "Deployment to Staging Status: SUCCESS",
+                         body: "The application has been successfully deployed to the staging environment.",
+                         to: 'thaaru1220@gmail.com'
+            }
+            post {
+                failure {
+                    emailext subject: "Deployment to Staging Status: FAILURE",
+                             body: "The deployment to the staging environment has failed.",
+                             to: 'thaaru1220@gmail.com'
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Pipeline execution completed'
+        }
+    }
+}
