@@ -1,0 +1,155 @@
+pipeline {
+    agent any
+
+    environment {
+        EMAIL_RECIPIENT = 'thaaru1220@gmail.com'
+        STAGING_ENV = 'staging-environment'  // Replace with actual URL/IP or name
+        PRODUCTION_ENV = 'production-environment'  // Replace with actual URL/IP or name
+        AWS_ECR_REPO = '600627318987.dkr.ecr.ap-southeast-2.amazonaws.com/jenkins'
+        AWS_REGION = 'ap-southeast-2'
+        APP_NAME = 'lending-app'
+        NODE_VERSION = '16'  // Assuming you are using Node.js 16.x
+    }
+
+    stages {
+        // Stage 1: Build
+        stage('Build') {
+            steps {
+                echo 'Building the Docker image for the Node.js project'
+                // Build Docker image
+                sh """
+                    docker build -t ${APP_NAME}:latest .
+                """
+                emailext subject: "Build Stage Status: SUCCESS",
+                         body: "The Docker image has been built successfully.",
+                         to: "${EMAIL_RECIPIENT}"
+            }
+            post {
+                failure {
+                    emailext subject: "Build Stage Status: FAILURE",
+                             body: "The Build stage has failed.",
+                             to: "${EMAIL_RECIPIENT}"
+                }
+            }
+        }
+
+        // Stage 2: Push to AWS ECR
+        stage('Push to AWS ECR') {
+            steps {
+                echo 'Pushing Docker image to AWS ECR'
+                // Login to AWS ECR and push the Docker image
+                sh """
+                    aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ECR_REPO}
+                    docker tag ${APP_NAME}:latest ${AWS_ECR_REPO}/${APP_NAME}:latest
+                    docker push ${AWS_ECR_REPO}/${APP_NAME}:latest
+                """
+                emailext subject: "Push to AWS ECR Status: SUCCESS",
+                         body: "The Docker image has been pushed to AWS ECR successfully.",
+                         to: "${EMAIL_RECIPIENT}"
+            }
+            post {
+                failure {
+                    emailext subject: "Push to AWS ECR Status: FAILURE",
+                             body: "The Push to AWS ECR stage has failed.",
+                             to: "${EMAIL_RECIPIENT}"
+                }
+            }
+        }
+
+        // Stage 3: Deploy to Staging
+        stage('Deploy to Staging') {
+            steps {
+                echo 'Deploying to Staging environment using Docker'
+                // Pull the image from AWS ECR and deploy to staging server
+                sh """
+                    docker pull ${AWS_ECR_REPO}/${APP_NAME}:latest
+                    docker run -d --name ${APP_NAME} -p 3000:3000 ${AWS_ECR_REPO}/${APP_NAME}:latest
+                """
+                emailext subject: "Staging Deployment Status: SUCCESS",
+                         body: "The application has been successfully deployed to the Staging environment.",
+                         to: "${EMAIL_RECIPIENT}"
+            }
+            post {
+                failure {
+                    emailext subject: "Staging Deployment Status: FAILURE",
+                             body: "The Staging deployment has failed.",
+                             to: "${EMAIL_RECIPIENT}"
+                }
+            }
+        }
+
+        // Stage 4: Integration Tests on Staging
+        stage('Integration Tests on Staging') {
+            steps {
+                echo 'Running integration tests on Staging'
+                // Run integration tests (e.g., Postman or Selenium)
+                sh 'newman run postman_collection.json'
+            }
+            post {
+                success {
+                    emailext subject: "Integration Tests on Staging Status: SUCCESS",
+                             body: "Integration tests have passed successfully on the Staging environment.",
+                             to: "${EMAIL_RECIPIENT}"
+                }
+                failure {
+                    emailext subject: "Integration Tests on Staging Status: FAILURE",
+                             body: "Integration tests on the Staging environment have failed.",
+                             to: "${EMAIL_RECIPIENT}"
+                }
+            }
+        }
+
+        // Stage 5: Deploy to Production
+        stage('Deploy to Production') {
+            steps {
+                echo 'Deploying to Production environment using Docker'
+                // Pull the image from AWS ECR and deploy to production server
+                sh """
+                    docker pull ${AWS_ECR_REPO}/${APP_NAME}:latest
+                    docker run -d --name ${APP_NAME} -p 3000:3000 ${AWS_ECR_REPO}/${APP_NAME}:latest
+                """
+                emailext subject: "Production Deployment Status: SUCCESS",
+                         body: "The application has been successfully deployed to the Production environment.",
+                         to: "${EMAIL_RECIPIENT}"
+            }
+            post {
+                failure {
+                    emailext subject: "Production Deployment Status: FAILURE",
+                             body: "The Production deployment has failed.",
+                             to: "${EMAIL_RECIPIENT}"
+                }
+            }
+        }
+
+        // Stage 6: Monitoring and Alerting
+        stage('Monitoring and Alerting') {
+            steps {
+                echo 'Setting up monitoring and alerting with Datadog'
+                // Add Datadog monitoring script here
+                sh 'datadog-agent check app_monitoring'
+            }
+            post {
+                success {
+                    emailext subject: "Monitoring Status: SUCCESS",
+                             body: "Monitoring and alerting has been set up successfully.",
+                             to: "${EMAIL_RECIPIENT}"
+                }
+                failure {
+                    emailext subject: "Monitoring Status: FAILURE",
+                             body: "Setting up monitoring has failed.",
+                             to: "${EMAIL_RECIPIENT}"
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Pipeline execution completed'
+            emailext subject: "Pipeline Execution Status: ${currentBuild.result}",
+                     body: "The pipeline has completed with status: ${currentBuild.result}",
+                     attachLog: true,
+                     to: "${EMAIL_RECIPIENT}"
+        }
+    }
+}
